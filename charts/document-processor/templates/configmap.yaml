@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    app: {{ .Release.Name }}
+data:
+  LOG_LEVEL: {{ .Values.config.logLevel }}
+  S3_BUCKET_NAME: {{ .Values.config.s3BucketName }}
+  SQS_QUEUE_URL: {{ .Values.config.sqsQueueUrl }}

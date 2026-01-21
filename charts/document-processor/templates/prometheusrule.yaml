@@ -1,0 +1,40 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  groups:
+    - name: {{ .Release.Name }}-alerts
+      rules:
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(http_requests_total{app="{{ .Release.Name }}", status=~"5.."}[5m])) 
+            / sum(rate(http_requests_total{app="{{ .Release.Name }}"}[5m])) > {{ .Values.monitoring.alerts.errorRateThreshold }} / 100
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High error rate detected"
+            description: "Error rate is above {{ .Values.monitoring.alerts.errorRateThreshold }}% for 5 minutes"
+
+        - alert: QueueDepthTooHigh
+          expr: aws_sqs_approximate_number_of_messages_visible{queue_name=~".*document-processor.*"} > {{ .Values.monitoring.alerts.queueDepthThreshold }}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "SQS queue depth too high"
+            description: "Queue has more than {{ .Values.monitoring.alerts.queueDepthThreshold }} messages for 10 minutes"
+
+        - alert: PodRestarts
+          expr: increase(kube_pod_container_status_restarts_total{pod=~"{{ .Release.Name }}.*"}[15m]) > 3
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod experiencing frequent restarts"
+            description: "Pod has restarted more than 3 times in 15 minutes"
+{{- end }}
