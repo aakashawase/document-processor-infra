@@ -1,0 +1,25 @@
+# Production environment values
+
+image:
+  tag: "production"
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/document-processor-production-role
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+config:
+  logLevel: "info"
+  s3BucketName: document-processor-production-documents
+  sqsQueueUrl: https://sqs.us-east-1.amazonaws.com/ACCOUNT_ID/document-processor-production-queue
+
+autoscaling:
+  minReplicas: 3
+  maxReplicas: 10
