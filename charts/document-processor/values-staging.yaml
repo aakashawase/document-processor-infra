@@ -1,0 +1,16 @@
+# Staging environment values
+
+image:
+  tag: "staging"
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/document-processor-staging-role
+
+config:
+  logLevel: "debug"
+  s3BucketName: document-processor-staging-documents
+  sqsQueueUrl: https://sqs.us-east-1.amazonaws.com/ACCOUNT_ID/document-processor-staging-queue
+
+autoscaling:
+  maxReplicas: 5

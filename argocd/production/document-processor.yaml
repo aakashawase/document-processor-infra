@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: document-processor-production
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_ORG/document-processor-infra
+    targetRevision: main
+    path: charts/document-processor
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-production.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: document-processor
+  syncPolicy:
+    # Manual sync required - no 'automated' block
+    # This ensures staging is validated before production deployment
+    syncOptions:
+      - CreateNamespace=true
+

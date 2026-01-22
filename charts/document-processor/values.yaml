@@ -1,0 +1,38 @@
+# Default values for document-processor
+
+replicaCount: 2
+
+image:
+  repository: 123456789.dkr.ecr.us-east-1.amazonaws.com/document-processor
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  annotations:
+    eks.amazonaws.com/role-arn: ""
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilization: 70
+
+config:
+  logLevel: "info"
+  s3BucketName: ""
+  sqsQueueUrl: ""
+
+monitoring:
+  enabled: true
+  alerts:
+    errorRateThreshold: 5
+    queueDepthThreshold: 1000
