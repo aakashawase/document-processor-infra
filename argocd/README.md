@@ -2,8 +2,10 @@
 
 ## Applications
 
-- `staging/document-processor.yaml` - Deploys to staging (tracks HEAD)
-- `production/document-processor.yaml` - Deploys to production (tracks main branch)
+| Application | Environment | Sync Mode | Branch |
+|-------------|-------------|-----------|--------|
+| `staging/document-processor.yaml` | Staging | **Automated** | main |
+| `production/document-processor.yaml` | Production | **Manual** | main |
 
 ## Apply Applications
 
@@ -16,59 +18,101 @@ kubectl apply -f argocd/production/document-processor.yaml
 
 ## Environment Promotion Strategy
 
-### 1. Deploy to Staging First
+### 1. Deploy to Staging (Automatic)
 
 ```bash
-# Push changes to feature branch
+# Create feature branch
 git checkout -b feature/my-change
+
 # Make changes to charts/
 git commit -am "Update deployment"
 git push origin feature/my-change
 
-# Merge to main - staging auto-syncs (tracks HEAD)
-git checkout main
-git merge feature/my-change
-git push origin main
+# Create PR and merge to main
+# Staging auto-syncs immediately
 ```
 
-Staging ArgoCD app automatically syncs since it tracks `HEAD`.
+Staging has `automated` sync enabled — changes deploy automatically on merge.
 
-### 2. Promote to Production After Validation
+### 2. Validate Staging
 
 ```bash
-# After staging validation, production syncs from main branch
-# Production app tracks 'main' branch - same as staging after merge
+# Check deployment status
+kubectl get pods -n document-processor
+kubectl logs -f deployment/document-processor -n document-processor
 
-# For controlled releases, use git tags:
-git tag v1.2.0
-git push origin v1.2.0
-
-# Update production app to track specific tag (optional)
-# Change targetRevision: v1.2.0 in production/document-processor.yaml
+# Run tests, verify functionality
 ```
 
-### 3. Handle Rollbacks
+### 3. Promote to Production (Manual Approval)
 
-**Option A: ArgoCD UI**
-```
-ArgoCD UI → Application → History → Rollback to previous sync
+Production requires **manual sync** — it won't auto-deploy.
+
+**Option A: ArgoCD CLI**
+```bash
+argocd app sync document-processor-production
 ```
 
-**Option B: Git Revert**
+**Option B: ArgoCD UI**
+```
+ArgoCD UI → document-processor-production → Click "Sync"
+```
+
+**Option C: kubectl**
+```bash
+argocd app sync document-processor-production --prune
+```
+
+### Promotion Flow
+
+```
+┌──────────┐    merge    ┌──────────┐   auto-sync   ┌─────────┐
+│   PR     │ ─────────►  │   main   │ ────────────► │ STAGING │
+└──────────┘             └────┬─────┘               └─────────┘
+                              │                          │
+                              │                     validate
+                              │                          │
+                              │                          ▼
+                              │              ┌─────────────────┐
+                              │              │  Tests Pass?    │
+                              │              └────────┬────────┘
+                              │                       │ yes
+                              ▼                       ▼
+                       ┌─────────────┐  manual   ┌────────────┐
+                       │ ArgoCD UI   │ ────────► │ PRODUCTION │
+                       │ Click Sync  │           └────────────┘
+                       └─────────────┘
+```
+
+---
+
+## Handle Rollbacks
+
+### Staging (auto-heals, so use git)
+
 ```bash
 git revert HEAD
 git push origin main
-# ArgoCD auto-syncs to reverted state
+# Staging auto-syncs to reverted state
 ```
 
-**Option C: Manual Sync to Previous Revision**
+### Production
+
+**Option A: ArgoCD UI**
+```
+ArgoCD UI → document-processor-production → History → Rollback
+```
+
+**Option B: Sync to Previous Commit**
 ```bash
 argocd app sync document-processor-production --revision <previous-commit-sha>
 ```
 
-**Option D: Helm Rollback (if not using ArgoCD sync)**
+**Option C: Git Revert + Manual Sync**
 ```bash
-helm rollback document-processor -n document-processor
+git revert HEAD
+git push origin main
+argocd app sync document-processor-production
 ```
 
 ---
@@ -90,4 +134,3 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 ```
-
